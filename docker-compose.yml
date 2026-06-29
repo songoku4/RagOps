@@ -7,5 +7,29 @@ services:
       - CHROMA_HOST=host.docker.internal
       - CHROMA_PORT=8001
       - OLLAMA_HOST=http://host.docker.internal:11434
+      - MLFLOW_TRACKING_URI=http://host.docker.internal:5001
     extra_hosts:
       - "host.docker.internal:host-gateway"
+
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=ragops123
+    volumes:
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+
+volumes:
+  grafana_data:
