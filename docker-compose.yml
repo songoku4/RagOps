@@ -1,16 +1,4 @@
 services:
-  app:
-    build: .
-    ports:
-      - "8000:8000"
-    environment:
-      - CHROMA_HOST=host.docker.internal
-      - CHROMA_PORT=8001
-      - OLLAMA_HOST=http://host.docker.internal:11434
-      - MLFLOW_TRACKING_URI=http://host.docker.internal:5001
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-
   prometheus:
     image: prom/prometheus:latest
     ports:

@@ -38,7 +38,8 @@ jobs:
           pip install langchain langchain-core langchain-community langchain-text-splitters
           pip install langchain-huggingface langchain-ollama langchain-chroma
           pip install chromadb sentence-transformers mlflow
-          pip install pytest httpx
+          pip install prometheus-fastapi-instrumentator prometheus-client
+          pip install pytest httpx ruff
 
       - name: Run tests
         run: pytest tests/ -v
