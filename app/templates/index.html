@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>RAG-Ops</title>
+  <style>
+    body { font-family: sans-serif; max-width: 700px; margin: 60px auto; padding: 0 20px; }
+    h1 { font-size: 24px; margin-bottom: 4px; }
+    p.sub { color: #666; margin-bottom: 32px; }
+    .card { border: 1px solid #e0e0e0; border-radius: 8px; padding: 20px; margin-bottom: 20px; }
+    h2 { font-size: 15px; margin-bottom: 12px; }
+    input[type="file"], input[type="text"] { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-bottom: 10px; box-sizing: border-box; }
+    button { background: #1a5276; color: white; border: none; padding: 8px 18px; border-radius: 6px; cursor: pointer; font-size: 14px; }
+    button:hover { background: #154360; }
+    .result { margin-top: 14px; background: #f8f8f8; border-radius: 6px; padding: 14px; font-size: 14px; line-height: 1.6; display: none; }
+    .source { margin-top: 8px; font-size: 12px; color: #555; border-left: 3px solid #1a5276; padding-left: 8px; }
+    .status { font-size: 13px; color: #666; margin-top: 8px; }
+  </style>
+</head>
+<body>
+  <h1>RAG-Ops</h1>
+  <p class="sub">Upload any PDF. Ask anything.</p>
+
+  <div class="card">
+    <h2>1. Upload a document</h2>
+    <input type="file" id="pdf-input" accept=".pdf">
+    <button onclick="uploadPDF()">Upload</button>
+    <div class="status" id="upload-status"></div>
+  </div>
+
+  <div class="card">
+    <h2>2. Ask a question</h2>
+    <input type="text" id="question" placeholder="What is this document about?">
+    <button onclick="askQuestion()">Ask</button>
+    <div class="result" id="answer-box">
+      <div id="answer-text"></div>
+      <div id="sources"></div>
+      <div style="margin-top:8px;font-size:12px;color:#999" id="latency"></div>
+    </div>
+  </div>
+
+  <script>
+    async function uploadPDF() {
+      const file = document.getElementById('pdf-input').files[0];
+      if (!file) return;
+      const status = document.getElementById('upload-status');
+      status.textContent = 'Uploading...';
+      const form = new FormData();
+      form.append('file', file);
+      const res = await fetch('/upload', { method: 'POST', body: form });
+      const data = await res.json();
+      status.textContent = res.ok ? data.message : data.detail;
+    }
+
+    async function askQuestion() {
+      const q = document.getElementById('question').value.trim();
+      if (!q) return;
+      const box = document.getElementById('answer-box');
+      box.style.display = 'block';
+      document.getElementById('answer-text').textContent = 'Thinking...';
+      document.getElementById('sources').innerHTML = '';
+      const res = await fetch('/query', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question: q })
+      });
+      const data = await res.json();
+      document.getElementById('answer-text').textContent = data.answer;
+      document.getElementById('latency').textContent = `Response time: ${data.latency_ms}ms`;
+      const src = data.sources.map(s =>
+        `<div class="source">Page ${s.page}: ${s.snippet}...</div>`
+      ).join('');
+      document.getElementById('sources').innerHTML = src;
+    }
+  </script>
+</body>
+</html>
