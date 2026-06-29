@@ -8,8 +8,11 @@ from langchain_ollama import OllamaLLM
 from langchain_core.prompts import PromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough
+import chromadb
 
-CHROMA_PATH = "chroma_db"
+CHROMA_HOST = os.getenv("CHROMA_HOST", "localhost")
+CHROMA_PORT = int(os.getenv("CHROMA_PORT", "8001"))
+OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://localhost:11434")
 EMBEDDING_MODEL = "all-MiniLM-L6-v2"
 LLM_MODEL = "llama3.2"
 
@@ -27,6 +30,17 @@ Question: {question}
 Answer:
 """)
 
+def get_db():
+    client = chromadb.HttpClient(host=CHROMA_HOST, port=CHROMA_PORT)
+    return Chroma(
+        client=client,
+        collection_name="ragops",
+        embedding_function=embeddings
+    )
+
+def format_docs(docs):
+    return "\n\n".join(doc.page_content for doc in docs)
+
 def ingest_pdf(file_bytes: bytes, filename: str) -> int:
     print(f"[INGEST] Received {len(file_bytes)} bytes for {filename}")
 
@@ -34,7 +48,7 @@ def ingest_pdf(file_bytes: bytes, filename: str) -> int:
         f.write(file_bytes)
         tmp_path = f.name
 
-    print(f"[INGEST] Temp file: {tmp_path}, size: {os.path.getsize(tmp_path)} bytes")
+    print(f"[INGEST] Temp file size: {os.path.getsize(tmp_path)} bytes")
 
     try:
         loader = PyPDFLoader(tmp_path)
@@ -49,30 +63,20 @@ def ingest_pdf(file_bytes: bytes, filename: str) -> int:
         print(f"[INGEST] Created {len(chunks)} chunks")
 
         if not chunks:
-            print("[INGEST] ERROR: No chunks — PDF may be image-based or empty")
+            print("[INGEST] ERROR: No chunks created")
             return 0
 
-        db = Chroma(
-            persist_directory=CHROMA_PATH,
-            embedding_function=embeddings
-        )
+        db = get_db()
         db.add_documents(chunks)
-        print(f"[INGEST] Stored {len(chunks)} chunks in ChromaDB")
+        print(f"[INGEST] Stored {len(chunks)} chunks")
         return len(chunks)
 
     finally:
         if os.path.exists(tmp_path):
             os.unlink(tmp_path)
 
-def format_docs(docs):
-    return "\n\n".join(doc.page_content for doc in docs)
-
 def query_rag(question: str) -> dict:
-    db = Chroma(
-        persist_directory=CHROMA_PATH,
-        embedding_function=embeddings
-    )
-
+    db = get_db()
     count = db._collection.count()
     print(f"[QUERY] ChromaDB has {count} chunks")
 
@@ -83,12 +87,10 @@ def query_rag(question: str) -> dict:
         }
 
     retriever = db.as_retriever(search_kwargs={"k": 3})
-    llm = OllamaLLM(model=LLM_MODEL)
+    llm = OllamaLLM(model=LLM_MODEL, base_url=OLLAMA_HOST)
 
     retrieved_docs = retriever.invoke(question)
     print(f"[QUERY] Retrieved {len(retrieved_docs)} chunks")
-    for i, doc in enumerate(retrieved_docs):
-        print(f"[QUERY] Chunk {i}: {doc.page_content[:100]}")
 
     chain = (
         {"context": retriever | format_docs, "question": RunnablePassthrough()}
