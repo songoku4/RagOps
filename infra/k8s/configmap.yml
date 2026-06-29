@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ragops-config
+  namespace: default
+data:
+  CHROMA_HOST: "host.minikube.internal"
+  CHROMA_PORT: "8001"
+  OLLAMA_HOST: "http://host.minikube.internal:11434"
+  MLFLOW_TRACKING_URI: "http://host.minikube.internal:5001"
+  EMBEDDING_MODEL: "./models/all-MiniLM-L6-v2"
