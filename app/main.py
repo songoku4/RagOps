@@ -1,7 +1,6 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
-from app.rag import ingest_pdf, query_rag
 import time
 from contextlib import asynccontextmanager
 from app.rag import ingest_pdf, query_rag, setup_mlflow
