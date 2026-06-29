@@ -10,6 +10,11 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
+    env:
+      MLFLOW_TRACKING_URI: sqlite:///mlflow_test.db
+      CHROMA_HOST: localhost
+      CHROMA_PORT: 8001
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

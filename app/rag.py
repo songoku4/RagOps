@@ -21,8 +21,13 @@ CHUNK_SIZE = int(os.getenv("CHUNK_SIZE", "500"))
 CHUNK_OVERLAP = int(os.getenv("CHUNK_OVERLAP", "50"))
 
 MLFLOW_URI = os.getenv("MLFLOW_TRACKING_URI", "http://localhost:5001")
-mlflow.set_tracking_uri(MLFLOW_URI)
-mlflow.set_experiment("ragops")
+
+def setup_mlflow():
+    try:
+        mlflow.set_tracking_uri(MLFLOW_URI)
+        mlflow.set_experiment("ragops")
+    except Exception as e:
+        print(f"[MLFLOW] Setup failed: {e}")
 
 embeddings = HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL)
 

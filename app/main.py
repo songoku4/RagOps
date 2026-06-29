@@ -3,8 +3,15 @@ from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 from app.rag import ingest_pdf, query_rag
 import time
+from contextlib import asynccontextmanager
+from app.rag import ingest_pdf, query_rag, setup_mlflow
 
-app = FastAPI(title="RAG-Ops Document Intelligence")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    setup_mlflow()
+    yield
+
+app = FastAPI(title="RAG-Ops Document Intelligence", lifespan=lifespan)
 
 class QueryRequest(BaseModel):
     question: str
