@@ -8,13 +8,17 @@ A production-ready Retrieval-Augmented Generation (RAG) system with a full MLOps
 
 ## Live demo
 
-[Screen recording / GIF here]
+### Query interface
+![RAG-Ops UI](docs/screenshots/ui-demo.png)
+*Upload a document, ask a question, and see the answer alongside retrieval latency, chunk count, and cited source pages — all in one view.*
 
----
+### Observability dashboard
+![Grafana Dashboard](docs/screenshots/grafana-dashboard.png)
+*Real-time Grafana dashboard tracking total queries, documents ingested, chunks stored, p95/p50 query latency, queries per minute, and HTTP error rates — all sourced from custom Prometheus metrics exposed by the FastAPI app.*
 
 ## What this project demonstrates
 
-This is not a notebook demo. Every component reflects real production engineering practice:
+Every component reflects real production engineering practice:
 
 | Layer | Technology | What it does |
 |---|---|---|
