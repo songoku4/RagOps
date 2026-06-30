@@ -2,76 +2,518 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>RAG-Ops</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
-    body { font-family: sans-serif; max-width: 700px; margin: 60px auto; padding: 0 20px; }
-    h1 { font-size: 24px; margin-bottom: 4px; }
-    p.sub { color: #666; margin-bottom: 32px; }
-    .card { border: 1px solid #e0e0e0; border-radius: 8px; padding: 20px; margin-bottom: 20px; }
-    h2 { font-size: 15px; margin-bottom: 12px; }
-    input[type="file"], input[type="text"] { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-bottom: 10px; box-sizing: border-box; }
-    button { background: #1a5276; color: white; border: none; padding: 8px 18px; border-radius: 6px; cursor: pointer; font-size: 14px; }
-    button:hover { background: #154360; }
-    .result { margin-top: 14px; background: #f8f8f8; border-radius: 6px; padding: 14px; font-size: 14px; line-height: 1.6; display: none; }
-    .source { margin-top: 8px; font-size: 12px; color: #555; border-left: 3px solid #1a5276; padding-left: 8px; }
-    .status { font-size: 13px; color: #666; margin-top: 8px; }
+    :root {
+      --bg: #0B0F14;
+      --surface: #11161D;
+      --surface-2: #161C25;
+      --border: #1F2733;
+      --border-light: #2A3441;
+      --text: #E6EDF3;
+      --text-muted: #7C8B9B;
+      --text-dim: #4D5A68;
+      --accent: #4FD1C5;
+      --accent-dim: rgba(79, 209, 197, 0.12);
+      --accent-glow: rgba(79, 209, 197, 0.25);
+      --error: #F87171;
+      --radius: 6px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      background-image:
+        radial-gradient(circle at 20% 0%, rgba(79, 209, 197, 0.06) 0%, transparent 50%),
+        linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
+      background-size: auto, 24px 24px, 24px 24px;
+      color: var(--text);
+      min-height: 100vh;
+      padding: 3rem 1.5rem;
+      line-height: 1.6;
+    }
+
+    .container {
+      max-width: 720px;
+      margin: 0 auto;
+    }
+
+    .header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 2.5rem;
+      padding-bottom: 1.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo-mark {
+      width: 36px;
+      height: 36px;
+      border-radius: var(--radius);
+      background: var(--accent-dim);
+      border: 1px solid var(--border-light);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .logo-mark svg { width: 18px; height: 18px; color: var(--accent); }
+
+    h1 {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1.15rem;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+    }
+
+    .subtitle {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      margin-top: 2px;
+    }
+
+    .status-pill {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 5px 10px;
+      border-radius: 100px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      white-space: nowrap;
+    }
+
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 0 0 var(--accent-glow);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 var(--accent-glow); }
+      70% { box-shadow: 0 0 0 6px transparent; }
+      100% { box-shadow: 0 0 0 0 transparent; }
+    }
+
+    .step {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1.5rem 1.5rem 1.75rem;
+      margin-bottom: 1.25rem;
+      position: relative;
+      transition: border-color 0.2s ease;
+    }
+
+    .step-label {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      margin-bottom: 1.1rem;
+    }
+
+    .step-num {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: var(--accent);
+      background: var(--accent-dim);
+      width: 22px;
+      height: 22px;
+      border-radius: 5px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .step-title {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .dropzone {
+      border: 1px dashed var(--border-light);
+      border-radius: var(--radius);
+      background: var(--surface-2);
+      padding: 1.1rem 1.2rem;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      cursor: pointer;
+      transition: border-color 0.2s ease, background 0.2s ease;
+      margin-bottom: 0.9rem;
+    }
+
+    .dropzone:hover {
+      border-color: var(--accent);
+      background: var(--accent-dim);
+    }
+
+    .dropzone svg {
+      width: 18px; height: 18px;
+      color: var(--text-muted);
+      flex-shrink: 0;
+    }
+
+    .dropzone-text {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .dropzone-text.has-file { color: var(--text); }
+
+    #pdf-input { display: none; }
+
+    .btn {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      background: var(--accent);
+      color: #0B0F14;
+      border: none;
+      padding: 0.65rem 1.3rem;
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: opacity 0.15s ease, transform 0.1s ease;
+      text-transform: uppercase;
+    }
+
+    .btn:hover { opacity: 0.88; }
+    .btn:active { transform: scale(0.98); }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .status-line {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      margin-top: 0.85rem;
+      padding-top: 0.85rem;
+      border-top: 1px solid var(--border);
+      display: none;
+    }
+
+    .status-line.visible { display: flex; align-items: center; gap: 8px; }
+    .status-line.success { color: var(--accent); }
+    .status-line.error { color: var(--error); }
+
+    .status-line::before {
+      content: '>';
+      color: var(--text-dim);
+    }
+
+    .input-row {
+      display: flex;
+      gap: 10px;
+    }
+
+    #question {
+      flex: 1;
+      background: var(--surface-2);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius);
+      padding: 0.7rem 0.9rem;
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      font-size: 0.9rem;
+      outline: none;
+      transition: border-color 0.2s ease;
+    }
+
+    #question::placeholder { color: var(--text-dim); }
+    #question:focus { border-color: var(--accent); }
+
+    .answer-wrap {
+      margin-top: 1.1rem;
+      display: none;
+    }
+
+    .answer-wrap.visible { display: block; }
+
+    .answer-box {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-left: 2px solid var(--accent);
+      border-radius: 0 var(--radius) var(--radius) 0;
+      padding: 1rem 1.1rem;
+      font-size: 0.92rem;
+      color: var(--text);
+      line-height: 1.65;
+    }
+
+    .answer-box.thinking {
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .thinking-dots span {
+      display: inline-block;
+      width: 4px; height: 4px;
+      border-radius: 50%;
+      background: var(--accent);
+      margin: 0 2px;
+      animation: bounce 1.2s infinite;
+    }
+    .thinking-dots span:nth-child(2) { animation-delay: 0.15s; }
+    .thinking-dots span:nth-child(3) { animation-delay: 0.3s; }
+
+    @keyframes bounce {
+      0%, 80%, 100% { opacity: 0.3; transform: translateY(0); }
+      40% { opacity: 1; transform: translateY(-3px); }
+    }
+
+    .meta-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 0.7rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.72rem;
+      color: var(--text-dim);
+    }
+
+    .sources {
+      margin-top: 0.6rem;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .source-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      padding: 0.6rem 0.8rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      line-height: 1.5;
+    }
+
+    .source-page {
+      color: var(--accent);
+      flex-shrink: 0;
+      font-weight: 600;
+    }
+
+    .source-snippet {
+      color: var(--text-dim);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+    }
+
+    .footer-note {
+      text-align: center;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.72rem;
+      color: var(--text-dim);
+      margin-top: 2rem;
+      letter-spacing: 0.02em;
+    }
+
+    @media (max-width: 480px) {
+      body { padding: 2rem 1rem; }
+      .header { flex-direction: column; gap: 1rem; }
+    }
   </style>
 </head>
 <body>
-  <h1>RAG-Ops</h1>
-  <p class="sub">Upload any PDF. Ask anything.</p>
 
-  <div class="card">
-    <h2>1. Upload a document</h2>
-    <input type="file" id="pdf-input" accept=".pdf">
-    <button onclick="uploadPDF()">Upload</button>
-    <div class="status" id="upload-status"></div>
-  </div>
+  <div class="container">
 
-  <div class="card">
-    <h2>2. Ask a question</h2>
-    <input type="text" id="question" placeholder="What is this document about?">
-    <button onclick="askQuestion()">Ask</button>
-    <div class="result" id="answer-box">
-      <div id="answer-text"></div>
-      <div id="sources"></div>
-      <div style="margin-top:8px;font-size:12px;color:#999" id="latency"></div>
+    <div class="header">
+      <div class="header-left">
+        <div class="logo-mark">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12a9 9 0 1 1-6.219-8.56"/><path d="M12 8v4l3 3"/>
+          </svg>
+        </div>
+        <div>
+          <h1>RAG-Ops</h1>
+          <div class="subtitle">Document intelligence, with full retrieval visibility</div>
+        </div>
+      </div>
+      <div class="status-pill">
+        <span class="status-dot"></span>
+        index ready
+      </div>
     </div>
+
+    <div class="step">
+      <div class="step-label">
+        <span class="step-num">01</span>
+        <span class="step-title">Ingest a document</span>
+      </div>
+
+      <label class="dropzone" id="dropzone">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+        </svg>
+        <span class="dropzone-text" id="dropzone-text">Choose a PDF file or drop it here</span>
+        <input type="file" id="pdf-input" accept=".pdf">
+      </label>
+
+      <button class="btn" onclick="uploadPDF()" id="upload-btn">Upload &amp; Index</button>
+
+      <div class="status-line" id="upload-status"></div>
+    </div>
+
+    <div class="step">
+      <div class="step-label">
+        <span class="step-num">02</span>
+        <span class="step-title">Query the index</span>
+      </div>
+
+      <div class="input-row">
+        <input type="text" id="question" placeholder="Ask anything about the uploaded document..." onkeydown="if(event.key==='Enter') askQuestion()">
+        <button class="btn" onclick="askQuestion()" id="ask-btn">Run</button>
+      </div>
+
+      <div class="answer-wrap" id="answer-wrap">
+        <div class="answer-box" id="answer-box"></div>
+        <div class="meta-row" id="meta-row" style="display:none;">
+          <span id="latency-text"></span>
+          <span id="chunks-text"></span>
+        </div>
+        <div class="sources" id="sources"></div>
+      </div>
+    </div>
+
+    <div class="footer-note">retrieval-augmented · self-hosted · observable end-to-end</div>
+
   </div>
 
   <script>
+    const pdfInput = document.getElementById('pdf-input');
+    const dropzoneText = document.getElementById('dropzone-text');
+
+    pdfInput.addEventListener('change', () => {
+      const file = pdfInput.files[0];
+      if (file) {
+        dropzoneText.textContent = file.name;
+        dropzoneText.classList.add('has-file');
+      }
+    });
+
     async function uploadPDF() {
-      const file = document.getElementById('pdf-input').files[0];
-      if (!file) return;
-      const status = document.getElementById('upload-status');
-      status.textContent = 'Uploading...';
+      const file = pdfInput.files[0];
+      const statusEl = document.getElementById('upload-status');
+      const btn = document.getElementById('upload-btn');
+
+      if (!file) {
+        statusEl.textContent = 'select a file first';
+        statusEl.className = 'status-line visible error';
+        return;
+      }
+
+      btn.disabled = true;
+      statusEl.textContent = 'uploading and chunking...';
+      statusEl.className = 'status-line visible';
+
       const form = new FormData();
       form.append('file', file);
-      const res = await fetch('/upload', { method: 'POST', body: form });
-      const data = await res.json();
-      status.textContent = res.ok ? data.message : data.detail;
+
+      try {
+        const res = await fetch('/upload', { method: 'POST', body: form });
+        const data = await res.json();
+        if (res.ok) {
+          statusEl.textContent = data.message;
+          statusEl.className = 'status-line visible success';
+        } else {
+          statusEl.textContent = data.detail || 'upload failed';
+          statusEl.className = 'status-line visible error';
+        }
+      } catch (err) {
+        statusEl.textContent = 'network error — is the server running?';
+        statusEl.className = 'status-line visible error';
+      } finally {
+        btn.disabled = false;
+      }
     }
 
     async function askQuestion() {
       const q = document.getElementById('question').value.trim();
       if (!q) return;
+
+      const wrap = document.getElementById('answer-wrap');
       const box = document.getElementById('answer-box');
-      box.style.display = 'block';
-      document.getElementById('answer-text').textContent = 'Thinking...';
-      document.getElementById('sources').innerHTML = '';
-      const res = await fetch('/query', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question: q })
-      });
-      const data = await res.json();
-      document.getElementById('answer-text').textContent = data.answer;
-      document.getElementById('latency').textContent = `Response time: ${data.latency_ms}ms`;
-      const src = data.sources.map(s =>
-        `<div class="source">Page ${s.page}: ${s.snippet}...</div>`
-      ).join('');
-      document.getElementById('sources').innerHTML = src;
+      const metaRow = document.getElementById('meta-row');
+      const sourcesEl = document.getElementById('sources');
+      const askBtn = document.getElementById('ask-btn');
+
+      wrap.classList.add('visible');
+      box.className = 'answer-box thinking';
+      box.innerHTML = 'Retrieving and generating <span class="thinking-dots"><span></span><span></span><span></span></span>';
+      metaRow.style.display = 'none';
+      sourcesEl.innerHTML = '';
+      askBtn.disabled = true;
+
+      try {
+        const res = await fetch('/query', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ question: q })
+        });
+        const data = await res.json();
+
+        box.className = 'answer-box';
+        box.textContent = data.answer;
+
+        if (data.latency_ms !== undefined) {
+          document.getElementById('latency-text').textContent = `${data.latency_ms}ms`;
+          document.getElementById('chunks-text').textContent = `${(data.sources || []).length} chunks retrieved`;
+          metaRow.style.display = 'flex';
+        }
+
+        if (data.sources && data.sources.length) {
+          sourcesEl.innerHTML = data.sources.map(s =>
+            `<div class="source-item"><span class="source-page">p.${s.page}</span><span class="source-snippet">${s.snippet}...</span></div>`
+          ).join('');
+        }
+      } catch (err) {
+        box.className = 'answer-box';
+        box.textContent = 'Something went wrong reaching the server.';
+      } finally {
+        askBtn.disabled = false;
+      }
     }
   </script>
+
 </body>
 </html>
